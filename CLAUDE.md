@@ -68,7 +68,13 @@ messages and program output. Conversations with the maintainer may be in German.
   parameters on a TCP target are an error. A baud rate that silently has no effect sends
   people debugging the hardware.
 - **Raw words are always in the output**, even when a value was decoded – in reverse
-  engineering the raw value matters more than the interpretation.
+  engineering the raw value matters more than the interpretation. A word that was not
+  read is shown as `-` (`null` in JSON), never as the zero in its slot.
+- **Every loop of requests checks the context.** The program catches Ctrl-C itself, and a
+  silent device makes each request wait out the timeout – without the check an
+  interrupt is ignored until the whole range has timed out.
+- **Bound a user-supplied number before computing with it** (`--count` before it is
+  multiplied by the registers per value), so an overflow cannot slip past a range check.
 - **Address parsing deliberately does not use `strconv.ParseUint(s, 0, …)`** (base 0
   would read `042` as octal 34).
 - Whoever changes flags or behaviour carries the README and the `--help` text along.

@@ -14,11 +14,11 @@ import (
 // fed straight into tools that want to compute with it; the raw words carry
 // the bit level.
 type jsonSample struct {
-	Time    string   `json:"time,omitempty"`
-	Address uint16   `json:"address"`
-	Raw     []string `json:"raw"`
-	Value   any      `json:"value"`
-	Error   string   `json:"error,omitempty"`
+	Time    string    `json:"time,omitempty"`
+	Address uint16    `json:"address"`
+	Raw     []*string `json:"raw"` // null for a word that was not read
+	Value   any       `json:"value"`
+	Error   string    `json:"error,omitempty"`
 }
 
 type printer struct {
@@ -41,7 +41,7 @@ func newPrinter(w io.Writer, c *config) *printer {
 func (p *printer) print(now time.Time, samples []sample) error {
 	if p.asJSON {
 		for _, s := range samples {
-			js := jsonSample{Address: s.addr, Raw: rawWords(s.words), Value: s.value}
+			js := jsonSample{Address: s.addr, Raw: rawWordsJSON(s), Value: s.value}
 			if p.timestamp {
 				js.Time = now.Format(time.RFC3339Nano)
 			}
@@ -71,15 +71,34 @@ func (p *printer) print(now time.Time, samples []sample) error {
 		if s.err != nil {
 			value = "! " + s.err.Error()
 		}
-		fmt.Fprintf(p.w, "%-8s %-20s %s\n", formatAddr(s.addr, p.hex), strings.Join(rawWords(s.words), " "), value)
+		fmt.Fprintf(p.w, "%-8s %-20s %s\n", formatAddr(s.addr, p.hex), strings.Join(rawWords(s), " "), value)
 	}
 	return nil
 }
 
-func rawWords(words []uint16) []string {
-	out := make([]string, len(words))
-	for i, w := range words {
-		out[i] = fmt.Sprintf("0x%04X", w)
+// missingWord stands in the raw column for a word that was not read: its slot
+// holds zero, and 0x0000 would read as a value the device sent.
+const missingWord = "-"
+
+func rawWords(s sample) []string {
+	out := make([]string, len(s.words))
+	for i, w := range s.words {
+		if s.failed[i] {
+			out[i] = missingWord
+		} else {
+			out[i] = fmt.Sprintf("0x%04X", w)
+		}
+	}
+	return out
+}
+
+func rawWordsJSON(s sample) []*string {
+	out := make([]*string, len(s.words))
+	for i, w := range s.words {
+		if !s.failed[i] {
+			v := fmt.Sprintf("0x%04X", w)
+			out[i] = &v
+		}
 	}
 	return out
 }

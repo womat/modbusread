@@ -68,7 +68,13 @@ func poll(ctx context.Context, c *config, stdout, stderr io.Writer) int {
 		}
 
 		if connected {
-			words, errs := readRegisters(mc, c.addr, c.total, c.regType)
+			words, errs := readRegisters(ctx, mc, c.addr, c.total, c.regType)
+			if ctx.Err() != nil {
+				// Interrupted mid-read: what was read is incomplete, and
+				// printing it would show registers as failed that were
+				// never asked for.
+				return exitCode(anyOK)
+			}
 			samples := buildSamples(c, words, errs)
 
 			if allFailed(errs) {
@@ -153,8 +159,12 @@ func signature(s sample) string {
 	if s.err != nil {
 		sb.WriteString("!" + s.err.Error())
 	}
-	for _, w := range s.words {
-		fmt.Fprintf(&sb, "%04X", w)
+	for i, w := range s.words {
+		if s.failed[i] {
+			sb.WriteString("----")
+		} else {
+			fmt.Fprintf(&sb, "%04X", w)
+		}
 	}
 	return sb.String()
 }

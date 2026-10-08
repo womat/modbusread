@@ -178,8 +178,11 @@ func buildConfig(o *options, pos []string, set map[string]bool) (*config, error)
 		return nil, fmt.Errorf("unknown --out %q (known: dec, hex)", o.out)
 	}
 
-	if o.count < 1 {
-		return nil, fmt.Errorf("--count must be at least 1")
+	// The upper bound comes before the multiplication below: a count near
+	// the int limit would otherwise overflow there and slip past the range
+	// check. 65536 is the size of the whole register space.
+	if o.count < 1 || o.count > 0x10000 {
+		return nil, fmt.Errorf("--count must be 1-65536")
 	}
 	if o.unit > 255 {
 		return nil, fmt.Errorf("--unit must be 0-255")
