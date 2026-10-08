@@ -21,6 +21,7 @@ go test ./...                                    # runs without hardware
 go test -run TestParseAddr ./internal/decode/    # a single test
 go vet ./...
 gofmt -l .                                       # no output = fine; CI fails on it
+make help                                        # build, test, lint, snapshot, release
 ```
 
 The integration tests start the Modbus server from `github.com/simonvetter/modbus` on a
@@ -35,7 +36,15 @@ free port and read against it – no device needed.
   parsing). This is where the logic lives that produces *wrong numbers* rather than
   crashes when it errs – hence kept network-free and fully testable
 - `.github/workflows/` – `ci.yml` (gofmt, vet, build, test -race, govulncheck) and
-  `release.yml` (vet, test and govulncheck again, then the binary for six platforms).
+  `release.yml` (refuses tags not on `main`, vet, test and govulncheck again, then
+  GoReleaser). `.goreleaser.yaml` decides the platforms and archive names; validate a
+  change with `make snapshot` (needs goreleaser). The binary gets the tag *with* `v` via
+  `-X main.version={{ .Tag }}`, so it matches what `go install …@vX.Y.Z` reports
+- `Makefile` – `build`, `test`, `lint`, `snapshot`, `release TAG=…`; `make help` lists them
+- `docs/social-preview.png` – rendered from `docs/social-preview.html` with headless Chrome
+  (command in the file). The terminal in it shows real output formats; re-render when the
+  output format changes, and upload it again under Settings → Social preview – GitHub
+  does not read it from the repository
   Actions are pinned to a commit SHA with the release in a comment, never to a movable
   tag; `.github/dependabot.yml` proposes weekly updates, but not for the `go install` pin
   of govulncheck
@@ -44,13 +53,17 @@ free port and read against it – no device needed.
 
 One permanent branch: **`main`**. Work happens in short-lived feature branches that go to
 `main` via PR, CI has to be green. A release is a tag `vX.Y.Z` on `main`; the release
-workflow stamps the tag in via `-X main.version`. The numbering continues the one from
+workflow stamps the tag in via `-X main.version`. Tag with `make release TAG=vX.Y.Z`: it
+refuses a dirty tree or a `main` that differs from `origin/main`. The numbering continues the one from
 womat/ecoflow (first release here: v0.7.0).
 
 ## Language
 
 Everything in the repo is English: documentation, code comments, `--help` text, error
-messages and program output. Conversations with the maintainer may be in German.
+messages and program output. The one exception is `README.de.md`, a short German summary
+as in the maintainer's other repos – it links to the English README for everything else,
+so it holds no detail that could fall behind. Conversations with the maintainer may be in
+German.
 
 ## Code conventions
 
