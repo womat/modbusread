@@ -1,6 +1,13 @@
 # modbusread
 
-[![ci](https://github.com/womat/modbusread/actions/workflows/ci.yml/badge.svg)](https://github.com/womat/modbusread/actions/workflows/ci.yml)
+**Read registers from any Modbus device over TCP or RS-485 – read-only, raw words always shown.**
+
+[![CI](https://github.com/womat/modbusread/actions/workflows/ci.yml/badge.svg)](https://github.com/womat/modbusread/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/womat/modbusread)](https://github.com/womat/modbusread/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Go](https://img.shields.io/github/go-mod/go-version/womat/modbusread)](go.mod)
+
+🇩🇪 [Deutsche Kurzfassung](README.de.md)
 
 A universal, **read-only** Modbus reader – address, register and type in, value out. No
 device knowledge in the tool, no built-in register map; it works with any Modbus device.
@@ -84,33 +91,44 @@ binaries are under [Releases](https://github.com/womat/modbusread/releases). The
 statically linked (`CGO_ENABLED=0`), so there is nothing to install: unpack and run.
 
 ```bash
-VERSION=v0.7.0   # or the latest, see the releases page
-ARCH=linux-arm64 # see the table below
+VERSION=0.8.0    # without the v - see the releases page for the latest
+ARCH=linux_arm64 # see the table below
 
-curl -LO "https://github.com/womat/modbusread/releases/download/$VERSION/modbusread-$VERSION-$ARCH.tar.gz"
-tar -xzf "modbusread-$VERSION-$ARCH.tar.gz"
+curl -LO "https://github.com/womat/modbusread/releases/download/v$VERSION/modbusread_${VERSION}_$ARCH.tar.gz"
+tar -xzf "modbusread_${VERSION}_$ARCH.tar.gz" modbusread
 ./modbusread --version
 ```
 
-| Machine                                         | `ARCH`          |
-|-------------------------------------------------|-----------------|
-| Raspberry Pi 3/4/5 with 64-bit Raspberry Pi OS  | `linux-arm64`   |
-| Raspberry Pi with a 32-bit OS, incl. Zero and Pi 1 | `linux-arm`  |
-| ordinary Linux PC/server, NAS                   | `linux-amd64`   |
-| Mac with Apple Silicon                          | `darwin-arm64`  |
-| Mac with Intel                                  | `darwin-amd64`  |
-| Windows                                         | `windows-amd64` |
+| Machine                                            | `ARCH`          |
+|----------------------------------------------------|-----------------|
+| Raspberry Pi 3/4/5/Zero 2 W with a 64-bit OS       | `linux_arm64`   |
+| Raspberry Pi 2/3/4/5/Zero 2 W with a 32-bit OS     | `linux_armv7`   |
+| Raspberry Pi 1 and Zero (1st gen)                  | `linux_armv6`   |
+| ordinary Linux PC/server, NAS                      | `linux_amd64`   |
+| Mac with Apple Silicon                             | `darwin_arm64`  |
+| Mac with Intel                                     | `darwin_amd64`  |
+| Windows                                            | `windows_amd64` (`.zip`) |
 
-The 32-bit archive is built with `GOARM=6` and therefore also runs on the older ARMv6
-models. The download can be checked against the `checksums.txt` of the same release:
+The download can be checked against the `checksums.txt` of the same release:
 
 ```bash
-curl -LO "https://github.com/womat/modbusread/releases/download/$VERSION/checksums.txt"
+curl -LO "https://github.com/womat/modbusread/releases/download/v$VERSION/checksums.txt"
 sha256sum -c checksums.txt --ignore-missing
 ```
 
-`modbusread --version` reports the commit and Go version from the build info that Go
-stamps in by itself during `go build`; release binaries carry the tag number.
+## Releases
+
+Every release on the [releases page](https://github.com/womat/modbusread/releases) carries
+archives for Linux (including all Raspberry Pi architectures), macOS and Windows with the
+binary, `README.md` and `LICENSE`, plus a `checksums.txt` and a changelog. Versions follow
+[semantic versioning](https://semver.org/).
+
+`modbusread --version` reports the release a binary was built from. A local build reports
+the commit instead, with `+dirty` when the working tree had changes – which is how the two
+are told apart.
+
+Up to v0.7.0 the archives were named `modbusread-v0.7.0-linux-arm64.tar.gz`; from v0.8.0
+on they follow the scheme above.
 
 ## History
 
@@ -121,16 +139,30 @@ it is released here. The version numbers continue.
 
 ## Development
 
+Building from source needs Go and `make`; `make help` lists the targets:
+
 ```
-go build ./...
-go test ./...      # runs without hardware: the integration tests start a Modbus server
-go vet ./...
-gofmt -l .         # no output = fine; CI fails on it
+make test       # go test -race ./... - no hardware: the integration tests start a Modbus server
+make lint       # gofmt, go vet, govulncheck
+make build      # ./modbusread for this machine
+make snapshot   # all release archives into ./dist, without publishing (needs goreleaser)
 ```
 
-A release is a tag `vX.Y.Z` on `main`; the workflow builds all targets and attaches them,
-with checksums, to the GitHub release.
+A release is a tag `vX.Y.Z` on `main`, made with `make release TAG=vX.Y.Z`; the workflow
+tests the tagged commit again and GoReleaser publishes the archives.
 
 ## License
 
-MIT, see [LICENSE](./LICENSE).
+modbusread is released under the MIT License – see [`LICENSE`](LICENSE) for the full text.
+
+### Third-party licenses
+
+The source tree contains no third-party code, but a **compiled binary statically links** the
+modules below. Their terms apply to anyone distributing that binary, not to the sources here.
+
+| Module                         | License |
+|--------------------------------|---------|
+| `github.com/simonvetter/modbus` | MIT     |
+| `github.com/goburrow/serial`    | MIT     |
+
+Both are permissive.
