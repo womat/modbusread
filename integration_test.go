@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"runtime"
@@ -262,6 +264,9 @@ func TestBadArguments(t *testing.T) {
 		{"127.0.0.1", "42082", "uint16", "--out", "oct"},
 		{"127.0.0.1", "42082", "uint16", "--count", "0"},
 		{"127.0.0.1", "65535", "uint32"}, // would run past the address space
+		{"127.0.0.1", "0", "uint16", "--count", "65537"},
+		// count*2 overflows int and would slip past the range check
+		{"127.0.0.1", "0", "uint32", "--count", "4611686018427387904"},
 	} {
 		if _, code := exec(t, args...); code == 0 {
 			t.Errorf("%v: expected a non-zero exit code", args)
@@ -288,5 +293,93 @@ func TestVersionFlag(t *testing.T) {
 	}
 	if !strings.HasPrefix(out, "modbusread ") || !strings.Contains(out, runtime.GOOS) {
 		t.Fatalf("unexpected version output: %q", out)
+	}
+}
+
+// A register that was not read has no raw value: showing the zero in its slot
+// as 0x0000 would read as something the device sent.
+func TestFailedRegisterHasNoRawValue(t *testing.T) {
+	addr, _ := startServer(t)
+
+	// 42298 and 42299 exist and hold zero, 42300 and 42301 do not exist.
+	out, _ := exec(t, addr, "42298", "raw", "--count", "4")
+	lines := dataLines(out)
+	if len(lines) != 4 {
+		t.Fatalf("expected 4 rows, got:\n%s", out)
+	}
+	for i, want := range []string{"0x0000", "0x0000", "-", "-"} {
+		if f := strings.Fields(lines[i]); len(f) < 2 || f[1] != want {
+			t.Errorf("row %d: raw %q, want %q:\n%s", i, f[1], want, out)
+		}
+	}
+
+	out, _ = exec(t, addr, "42298", "raw", "--count", "4", "--json")
+	var rows []jsonSample
+	for l := range strings.SplitSeq(strings.TrimSpace(out), "\n") {
+		var js jsonSample
+		if err := json.Unmarshal([]byte(l), &js); err != nil {
+			t.Fatalf("%v: %s", err, l)
+		}
+		rows = append(rows, js)
+	}
+	if len(rows) != 4 || rows[0].Raw[0] == nil || rows[2].Raw[0] != nil || rows[2].Error == "" {
+		t.Fatalf("want raw for 42298 and null raw with an error for 42300, got:\n%s", out)
+	}
+}
+
+// startSilentServer accepts connections and never answers, like a gateway
+// whose serial side has the wrong baud rate or unit id.
+func startSilentServer(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			t.Cleanup(func() { c.Close() })
+		}
+	}()
+	return ln.Addr().String()
+}
+
+// Every request to a silent device waits out the full timeout, and a failed
+// range is re-read register by register. An interrupt must end that after the
+// request in flight, not after all of them.
+func TestInterruptStopsReadingSilentDevice(t *testing.T) {
+	addr := startSilentServer(t)
+
+	opts, pos, fs, err := parseArgs([]string{addr, "0", "raw", "--count", "20", "--timeout", "500ms"}, &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := buildConfig(opts, pos, setFlags(fs))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 700*time.Millisecond)
+	defer cancel()
+
+	var out bytes.Buffer
+	start := time.Now()
+	code := poll(ctx, cfg, &out, &bytes.Buffer{})
+	elapsed := time.Since(start)
+
+	// Uninterrupted this takes 21 timeouts, 10.5s. Interrupted after 0.7s it
+	// may still finish the request in flight: 1s, plus slack.
+	if elapsed > 2*time.Second {
+		t.Fatalf("took %v after the interrupt", elapsed)
+	}
+	if code == 0 {
+		t.Error("expected a non-zero exit code: nothing was read")
+	}
+	if out.Len() > 0 {
+		t.Errorf("an interrupted read must not print a half-done result:\n%s", out.String())
 	}
 }

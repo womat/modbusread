@@ -76,7 +76,12 @@ More flags: `--unit`, `--fc holding|input`, `--byte-order`, `--timeout`, `--json
 `--samples`. `modbusread --help` shows everything.
 
 The raw words are always printed, even when a value was decoded – when reverse
-engineering a register map, the raw value matters more than the interpretation.
+engineering a register map, the raw value matters more than the interpretation. A
+register that could not be read shows `-` there (`null` in `--json`) next to the error,
+never `0x0000`: a zero would look like something the device sent.
+
+Ctrl-C ends a read after the request in flight. A device that does not answer makes every
+request wait for `--timeout`, so that is at most one timeout, not one per register.
 
 ## Installation
 
