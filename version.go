@@ -8,7 +8,7 @@ import (
 
 // version can be set at build time with
 //
-//	go build -ldflags "-X main.version=v1.2.3" ./cmd/modbusread
+//	go build -ldflags "-X main.version=v1.2.3" .
 //
 // When it is empty — the normal case — the value comes from the build
 // information Go embeds automatically, so there is no version constant in the

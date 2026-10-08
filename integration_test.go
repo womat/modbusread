@@ -61,7 +61,7 @@ func startServer(t *testing.T) (string, *testHandler) {
 	h := &testHandler{base: 42000, regs: make([]uint16, 300)}
 	h.regs[82] = 100     // 42082: a plausible SOC
 	h.regs[100] = 0x0000 // 42100/42101: 1.0f, low word first
-	h.regs[101] = 0x3F80 // (as the EcoFlow devices encode floats)
+	h.regs[101] = 0x3F80 // (the word order many devices use for floats)
 	h.regs[200] = 0xFFFB // 42200: -5 as int16
 
 	addr := freePort(t)

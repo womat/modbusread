@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/womat/ecoflow/internal/decode"
+	"github.com/womat/modbusread/internal/decode"
 )
 
 func newFlagSet(o *options, stderr io.Writer) *flag.FlagSet {

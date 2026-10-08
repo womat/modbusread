@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/simonvetter/modbus"
 
-	"github.com/womat/ecoflow/internal/decode"
+	"github.com/womat/modbusread/internal/decode"
 )
 
 // sample is one register's worth of a read: either raw words plus a decoded

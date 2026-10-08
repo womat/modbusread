@@ -24,7 +24,7 @@ func TestDecode(t *testing.T) {
 		{"int32 negative", []uint16{0xFFFF, 0xFFFB}, I32, HighWordFirst, BigEndian, int32(-5)},
 
 		// 1.0f is 0x3F800000; the same words in the other word order are
-		// the case the EcoFlow devices need.
+		// the case many devices need.
 		{"float32 high word first", []uint16{0x3F80, 0x0000}, F32, HighWordFirst, BigEndian, float32(1)},
 		{"float32 low word first", []uint16{0x0000, 0x3F80}, F32, LowWordFirst, BigEndian, float32(1)},
 		{"float64", []uint16{0x3FF0, 0x0000, 0x0000, 0x0000}, F64, HighWordFirst, BigEndian, float64(1)},

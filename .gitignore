@@ -1,0 +1,31 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# The command, when built into the working directory with "go build".
+/modbusread
+
+# Test binary, built with `go test -c`
+*.test
+
+# Code coverage profiles and other test artifacts
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Release builds
+/dist/
+
+# Editor/IDE
+.idea/
+
+# Claude Code's permission rules - per-user, not a team-wide convention.
+.claude/settings.local.json

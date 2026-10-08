@@ -20,7 +20,7 @@ import (
 
 	"github.com/simonvetter/modbus"
 
-	"github.com/womat/ecoflow/internal/decode"
+	"github.com/womat/modbusread/internal/decode"
 )
 
 // maxRegsPerRequest is the Modbus limit for a single read of holding or
