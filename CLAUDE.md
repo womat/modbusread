@@ -51,8 +51,9 @@ free port and read against it – no device needed.
 
 ## Branches & releases
 
-One permanent branch: **`main`**. Work happens in short-lived feature branches that go to
-`main` via PR, CI has to be green. A release is a tag `vX.Y.Z` on `main`; the release
+One permanent branch: **`main`**. Work is committed to
+`main` directly; CI runs on every push and has to be green before a release. A short-lived
+branch with a PR only when someone should review the change first. A release is a tag `vX.Y.Z` on `main`; the release
 workflow stamps the tag in via `-X main.version`. Tag with `make release TAG=vX.Y.Z`: it
 refuses a dirty tree or a `main` that differs from `origin/main`. The numbering continues the one from
 womat/ecoflow (first release here: v0.7.0).
