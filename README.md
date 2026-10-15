@@ -132,9 +132,6 @@ binary, `README.md` and `LICENSE`, plus a `checksums.txt` and a changelog. Versi
 the commit instead, with `+dirty` when the working tree had changes – which is how the two
 are told apart.
 
-Up to v0.7.0 the archives were named `modbusread-v0.7.0-linux-arm64.tar.gz`; from v0.8.0
-on they follow the scheme above.
-
 ## History
 
 Up to v0.6.0 `modbusread` lived in [womat/ecoflow](https://github.com/womat/ecoflow) as

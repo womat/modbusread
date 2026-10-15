@@ -45,7 +45,7 @@ free port and read against it – no device needed.
   (command in the file). The terminal in it shows real output formats; re-render when the
   output format changes, and upload it again under Settings → Social preview – GitHub
   does not read it from the repository
-  Actions are pinned to a commit SHA with the release in a comment, never to a movable
+- Actions are pinned to a commit SHA with the release in a comment, never to a movable
   tag; `.github/dependabot.yml` proposes weekly updates, but not for the `go install` pin
   of govulncheck
 
