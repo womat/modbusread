@@ -21,6 +21,7 @@ go test ./...                                    # runs without hardware
 go test -run TestParseAddr ./internal/decode/    # a single test
 go vet ./...
 gofmt -l .                                       # no output = fine; CI fails on it
+make lint                                        # gofmt, go fix -diff, go mod tidy -diff, vet, golangci-lint, govulncheck
 make help                                        # build, test, lint, snapshot, release
 ```
 
@@ -35,8 +36,9 @@ free port and read against it – no device needed.
 - `internal/decode/` – pure functions over `[]uint16` (types, word/byte order, address
   parsing). This is where the logic lives that produces *wrong numbers* rather than
   crashes when it errs – hence kept network-free and fully testable
-- `.github/workflows/` – `ci.yml` (gofmt, vet, build, test -race, govulncheck) and
-  `release.yml` (refuses tags not on `main`, vet, test and govulncheck again, then
+- `.github/workflows/` – `ci.yml` (`make test`, `make lint`, `make build`; on every
+  push/PR against `main`, weekly and by hand, Go from `go.mod` with `check-latest`) and
+  `release.yml` (refuses tags not on `main`, `make test` and `make lint` again, then
   GoReleaser). `.goreleaser.yaml` decides the platforms and archive names; validate a
   change with `make snapshot` (needs goreleaser). The binary gets the tag *with* `v` via
   `-X main.version={{ .Tag }}`, so it matches what `go install …@vX.Y.Z` reports
@@ -46,8 +48,9 @@ free port and read against it – no device needed.
   output format changes, and upload it again under Settings → Social preview – GitHub
   does not read it from the repository
 - Actions are pinned to a commit SHA with the release in a comment, never to a movable
-  tag; `.github/dependabot.yml` proposes weekly updates, but not for the `go install` pin
-  of govulncheck
+  tag; `.github/dependabot.yml` proposes weekly updates (actions as `chore(ci)`, Go modules
+  as `chore(deps)`), but not for the `go install` pins of golangci-lint and govulncheck,
+  which sit in the Makefile only; exclusions and their reasons in `.golangci.yml`
 
 ## Branches & releases
 

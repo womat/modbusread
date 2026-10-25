@@ -1,0 +1,27 @@
+# golangci-lint configuration for github.com/womat/modbusread, run by make lint
+# and CI. The default linter set is kept. The exclusions below are decisions,
+# not convenience - each one says why, as in golib.
+
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      # Listed explicitly rather than switching errcheck off, so an unchecked
+      # error from anything else still gets reported.
+      exclude-functions:
+        # Error messages to stderr, the --help text and the --version line: a
+        # command that cannot write to its own stderr has nowhere left to report
+        # that either. The readings themselves go out through a checked write
+        # (printer.print in output.go).
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+
+  exclusions:
+    rules:
+      # Test code may ignore what it is not asserting on: a deferred Close of a
+      # connection or of the listener of the emulated Modbus server.
+      - path: _test\.go
+        linters:
+          - errcheck

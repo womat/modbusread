@@ -153,7 +153,7 @@ Building from source needs Go and `make`; `make help` lists the targets:
 
 ```
 make test       # go test -race ./... - no hardware: the integration tests start a Modbus server
-make lint       # gofmt, go vet, govulncheck
+make lint       # gofmt, go fix -diff, go mod tidy -diff, go vet, golangci-lint, govulncheck
 make build      # ./modbusread for this machine
 make snapshot   # all release archives into ./dist, without publishing (needs goreleaser)
 ```

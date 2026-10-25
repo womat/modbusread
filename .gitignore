@@ -24,6 +24,9 @@ go.work.sum
 # Release builds
 /dist/
 
+# golangci-lint and govulncheck, installed by make lint.
+/bin/
+
 # Editor/IDE
 .idea/
 
