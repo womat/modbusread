@@ -3,13 +3,16 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -372,6 +375,78 @@ func TestFormatValue(t *testing.T) {
 		if got := formatValue(tc.v, true); got != tc.hex {
 			t.Errorf("%#v hex: got %q, want %q", tc.v, got, tc.hex)
 		}
+	}
+}
+
+// startDropProxy forwards Modbus TCP connections to target, but closes the
+// first one right after its first response – a connection that dies while
+// polling. It returns its address and a counter of accepted connections.
+func startDropProxy(t *testing.T, target string) (string, *atomic.Int32) {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+
+	var conns atomic.Int32
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go forward(c, target, conns.Add(1) == 1)
+		}
+	}()
+	return ln.Addr().String(), &conns
+}
+
+func forward(c net.Conn, target string, dropAfterFirst bool) {
+	defer c.Close()
+	up, err := net.Dial("tcp", target)
+	if err != nil {
+		return
+	}
+	defer up.Close()
+	go func() { _, _ = io.Copy(up, c) }()
+
+	if !dropAfterFirst {
+		_, _ = io.Copy(c, up)
+		return
+	}
+	// One response: the MBAP header, whose last two bytes give the length
+	// of the rest.
+	hdr := make([]byte, 6)
+	if _, err := io.ReadFull(up, hdr); err != nil {
+		return
+	}
+	body := make([]byte, binary.BigEndian.Uint16(hdr[4:]))
+	if _, err := io.ReadFull(up, body); err != nil {
+		return
+	}
+	_, _ = c.Write(append(hdr, body...))
+}
+
+// In polling mode a dead connection is reopened at the next interval rather
+// than failing every pass after it.
+func TestPollingReconnects(t *testing.T) {
+	addr, _ := startServer(t)
+	proxy, conns := startDropProxy(t, addr)
+
+	out, code := exec(t, proxy, "42082", "uint16", "--interval", "20ms", "--samples", "3")
+	if code != 0 {
+		t.Fatalf("exit code %d, output:\n%s", code, out)
+	}
+	lines := dataLines(out)
+	if len(lines) != 3 ||
+		!strings.HasSuffix(lines[0], " 100") ||
+		!strings.Contains(lines[1], "!") ||
+		!strings.HasSuffix(lines[2], " 100") {
+		t.Fatalf("want a value, an error, then a value again:\n%s", out)
+	}
+	if n := conns.Load(); n != 2 {
+		t.Fatalf("%d connections, want 2: the second pass should have reconnected", n)
 	}
 }
 
