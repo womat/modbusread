@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"runtime"
@@ -323,6 +324,20 @@ func TestJSONNonFiniteFloat(t *testing.T) {
 {"address":42014,"raw":["0x3F80","0x0000"],"value":1}`
 	if got := strings.TrimSpace(out); got != want {
 		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("disk full") }
+
+// A write error must end the run in the text output as it does with --json,
+// or a redirect onto a full disk exits 0 with half a file.
+func TestTextOutputReportsWriteError(t *testing.T) {
+	p := newPrinter(failingWriter{}, &config{})
+	s := sample{addr: 1, words: []uint16{1}, failed: []bool{false}, value: uint16(1)}
+	if err := p.print(time.Now(), []sample{s}); err == nil {
+		t.Fatal("expected the write error")
 	}
 }
 

@@ -56,25 +56,29 @@ func (p *printer) print(now time.Time, samples []sample) error {
 		return nil
 	}
 
+	// Built up first and written in one go, so that a write error – a full
+	// disk behind a redirect – is reported as it is for --json.
+	var b strings.Builder
 	if !p.headed {
 		p.headed = true
 		if p.timestamp {
-			fmt.Fprintf(p.w, "%-12s ", "time")
+			fmt.Fprintf(&b, "%-12s ", "time")
 		}
-		fmt.Fprintf(p.w, "%-8s %-20s %s\n", "addr", "raw", "value")
+		fmt.Fprintf(&b, "%-8s %-20s %s\n", "addr", "raw", "value")
 	}
 
 	for _, s := range samples {
 		if p.timestamp {
-			fmt.Fprintf(p.w, "%-12s ", now.Format("15:04:05.000"))
+			fmt.Fprintf(&b, "%-12s ", now.Format("15:04:05.000"))
 		}
 		value := formatValue(s.value, p.hex)
 		if s.err != nil {
 			value = "! " + s.err.Error()
 		}
-		fmt.Fprintf(p.w, "%-8s %-20s %s\n", formatAddr(s.addr, p.hex), strings.Join(rawWords(s), " "), value)
+		fmt.Fprintf(&b, "%-8s %-20s %s\n", formatAddr(s.addr, p.hex), strings.Join(rawWords(s), " "), value)
 	}
-	return nil
+	_, err := io.WriteString(p.w, b.String())
+	return err
 }
 
 // missingWord stands in the raw column for a word that was not read: its slot
