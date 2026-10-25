@@ -82,8 +82,13 @@ func poll(ctx context.Context, c *config, stdout, stderr io.Writer) int {
 				// single register having vanished.
 				_ = mc.Close()
 				connected = false
-			} else {
-				anyOK = true
+			}
+			// Success is a value, not a register: a uint32 with one of
+			// its two registers missing was not read.
+			for _, s := range samples {
+				if s.err == nil {
+					anyOK = true
+				}
 			}
 
 			shown := samples

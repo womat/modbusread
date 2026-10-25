@@ -19,11 +19,11 @@ func newFlagSet(o *options, stderr io.Writer) *flag.FlagSet {
 	fs.StringVar(&o.fc, "fc", "holding", "register space: holding (FC3) or input (FC4)")
 	fs.StringVar(&o.wordOrder, "word-order", "high", "word order of multi-register values: high or low")
 	fs.StringVar(&o.byteOrder, "byte-order", "big", "byte order within a register: big or little")
-	fs.DurationVar(&o.timeout, "timeout", 3*time.Second, "connect and request timeout")
+	fs.DurationVar(&o.timeout, "timeout", 3*time.Second, "request timeout (a network connect waits up to 5s regardless)")
 	fs.StringVar(&o.out, "out", "dec", "display addresses and integers as dec or hex")
 	fs.BoolVar(&o.json, "json", false, "machine readable output (JSON lines when polling)")
 	fs.DurationVar(&o.interval, "interval", 0, "repeat the read at this interval until interrupted")
-	fs.IntVar(&o.samples, "samples", 0, "stop after this many samples (0 = unlimited)")
+	fs.IntVar(&o.samples, "samples", 0, "with --interval: stop after this many samples (0 = unlimited)")
 	fs.BoolVar(&o.onChange, "on-change", false, "with --interval: print only when a value changed")
 	fs.BoolVar(&o.version, "version", false, "print the version and exit")
 

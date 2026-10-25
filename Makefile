@@ -1,7 +1,7 @@
 BINARY_NAME=modbusread
 
-# Branch policy: there is one branch, RELEASE_BRANCH; work reaches it through pull
-# requests and releases are tags on it. The release target only tags a clean
+# Branch policy: there is one branch, RELEASE_BRANCH; work is committed to it directly
+# (a pull request only when someone should review first) and releases are tags on it. The release target only tags a clean
 # RELEASE_BRANCH that matches origin, because a tag on a commit that never reached it
 # produces artifacts that no longer match what the repository publishes.
 RELEASE_BRANCH ?= main

@@ -274,6 +274,58 @@ func TestBadArguments(t *testing.T) {
 	}
 }
 
+// Flags that cannot take effect are refused. The server answers, so a run
+// that ignored the flag would succeed – and a negative interval used to crash.
+func TestIneffectiveFlagsRejected(t *testing.T) {
+	addr, _ := startServer(t)
+
+	for _, args := range [][]string{
+		{"--interval", "-1s"},
+		{"--interval", "20ms", "--samples", "-1"},
+		{"--timeout", "-1s"},
+		{"--samples", "3"}, // only with --interval
+		{"--on-change"},    // only with --interval
+	} {
+		if _, code := exec(t, append([]string{addr, "42082", "uint16"}, args...)...); code == 0 {
+			t.Errorf("%v: expected a non-zero exit code", args)
+		}
+	}
+}
+
+// The exit code follows the values asked for, not the registers: a uint32
+// whose second register does not exist was not read, even though one of its
+// registers answered.
+func TestPartlyReadValueFails(t *testing.T) {
+	addr, _ := startServer(t)
+
+	if _, code := exec(t, addr, "42299", "uint32"); code == 0 {
+		t.Fatal("expected a non-zero exit code: the only value could not be read")
+	}
+}
+
+// JSON has no number for NaN or infinity. 0xFFFF 0xFFFF is a common "not
+// available" marker, and it must not end the output.
+func TestJSONNonFiniteFloat(t *testing.T) {
+	addr, h := startServer(t)
+	h.set(42010, 0xFFFF) // NaN
+	h.set(42011, 0xFFFF)
+	h.set(42012, 0x7F80) // +Inf
+	h.set(42013, 0x0000)
+	h.set(42014, 0x3F80) // 1
+	h.set(42015, 0x0000)
+
+	out, code := exec(t, addr, "42010", "float32", "--count", "3", "--json")
+	if code != 0 {
+		t.Fatalf("exit code %d, output:\n%s", code, out)
+	}
+	want := `{"address":42010,"raw":["0xFFFF","0xFFFF"],"value":null}
+{"address":42012,"raw":["0x7F80","0x0000"],"value":null}
+{"address":42014,"raw":["0x3F80","0x0000"],"value":1}`
+	if got := strings.TrimSpace(out); got != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
 // dataLines returns the output rows without the header.
 func dataLines(out string) []string {
 	var rows []string

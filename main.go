@@ -187,6 +187,17 @@ func buildConfig(o *options, pos []string, set map[string]bool) (*config, error)
 	if o.unit > 255 {
 		return nil, fmt.Errorf("--unit must be 0-255")
 	}
+	if o.interval < 0 || o.timeout < 0 || o.samples < 0 {
+		return nil, fmt.Errorf("--interval, --timeout and --samples must not be negative")
+	}
+	// Without --interval there is a single read, so these would do nothing.
+	if o.interval == 0 {
+		for _, name := range []string{"samples", "on-change"} {
+			if set[name] {
+				return nil, fmt.Errorf("--%s only applies together with --interval", name)
+			}
+		}
+	}
 
 	// For a string the count is the number of registers making up the text;
 	// for every other type it is the number of values.

@@ -33,7 +33,8 @@ The **target** decides the transport, without an extra flag:
 | `rtu://…`, `tcp://…`, `udp://…`, `rtuovertcp://…`, `rtuoverudp://…` | explicit, overrides the detection |
 
 `tcp+tls://` is rejected outright rather than silently ignored – the library could do
-it, but offering it untested would be a promise with nothing behind it.
+it, but it needs certificates this tool does not manage, and offering it untested would
+be a promise with nothing behind it.
 
 ```console
 $ modbusread 192.168.1.50 42082 uint16
@@ -73,15 +74,22 @@ On a TCP target these flags are **rejected** rather than ignored – a baud rate
 silently has no effect sends you off debugging the wiring.
 
 More flags: `--unit`, `--fc holding|input`, `--byte-order`, `--timeout`, `--json`,
-`--samples`. `modbusread --help` shows everything.
+`--samples`. `modbusread --help` shows everything. `--samples` and `--on-change` belong to
+`--interval` and are rejected without it, for the same reason as the serial flags.
 
 The raw words are always printed, even when a value was decoded – when reverse
 engineering a register map, the raw value matters more than the interpretation. A
 register that could not be read shows `-` there (`null` in `--json`) next to the error,
-never `0x0000`: a zero would look like something the device sent.
+never `0x0000`: a zero would look like something the device sent. A float that is NaN or
+infinite is `null` in `--json`, since JSON has no number for it; its bits are in `raw`.
+
+The exit code is non-zero when not a single value could be read – a `uint32` with one of
+its two registers missing counts as not read. In a range, one readable value is enough.
 
 Ctrl-C ends a read after the request in flight. A device that does not answer makes every
 request wait for `--timeout`, so that is at most one timeout, not one per register.
+Connecting over the network is the exception: the Modbus library waits up to 5 s for it
+whatever `--timeout` says, and Ctrl-C takes effect only after that.
 
 ## Installation
 

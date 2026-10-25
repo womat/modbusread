@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -41,7 +42,7 @@ func newPrinter(w io.Writer, c *config) *printer {
 func (p *printer) print(now time.Time, samples []sample) error {
 	if p.asJSON {
 		for _, s := range samples {
-			js := jsonSample{Address: s.addr, Raw: rawWordsJSON(s), Value: s.value}
+			js := jsonSample{Address: s.addr, Raw: rawWordsJSON(s), Value: jsonValue(s.value)}
 			if p.timestamp {
 				js.Time = now.Format(time.RFC3339Nano)
 			}
@@ -101,6 +102,25 @@ func rawWordsJSON(s sample) []*string {
 		}
 	}
 	return out
+}
+
+// jsonValue returns v in a form JSON can carry. NaN and infinity have no JSON
+// number – encoding them fails and would end the output – so they become
+// null; their bit pattern is in the raw words.
+func jsonValue(v any) any {
+	var f float64
+	switch x := v.(type) {
+	case float32:
+		f = float64(x)
+	case float64:
+		f = x
+	default:
+		return v
+	}
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return nil
+	}
+	return v
 }
 
 func formatAddr(a uint16, hex bool) string {
