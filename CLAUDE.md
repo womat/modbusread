@@ -83,7 +83,12 @@ German.
   people debugging the hardware.
 - **Raw words are always in the output**, even when a value was decoded – in reverse
   engineering the raw value matters more than the interpretation. A word that was not
-  read is shown as `-` (`null` in JSON), never as the zero in its slot.
+  read is shown as `-` (`null` in JSON), never as the zero in its slot. A NaN or
+  infinite float is `null` in JSON – JSON has no number for it, and failing to encode
+  it would end the output; its bits stay in `raw`.
+- **The exit code follows the values, not the registers:** a `uint32` with one of its
+  two registers missing was not read. Non-zero only if no value at all was read, so a
+  range scan with gaps still succeeds while a script reading one value sees the failure.
 - **Every loop of requests checks the context.** The program catches Ctrl-C itself, and a
   silent device makes each request wait out the timeout – without the check an
   interrupt is ignored until the whole range has timed out.
