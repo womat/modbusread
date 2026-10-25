@@ -27,6 +27,8 @@ func newFlagSet(o *options, stderr io.Writer) *flag.FlagSet {
 	fs.BoolVar(&o.onChange, "on-change", false, "with --interval: print only when a value changed")
 	fs.BoolVar(&o.version, "version", false, "print the version and exit")
 
+	// A serial flag added here also belongs in serialFlags in buildSerial,
+	// or it is silently ignored on a TCP target instead of refused.
 	fs.UintVar(&o.baud, "baud", 19200, "serial line speed (RTU only)")
 	fs.UintVar(&o.dataBits, "databits", 8, "bits per character, 7 or 8 (RTU only)")
 	fs.StringVar(&o.parity, "parity", "none", "parity: none, even or odd (RTU only)")

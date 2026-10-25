@@ -275,9 +275,10 @@ func TestBadArguments(t *testing.T) {
 	}
 }
 
-// Flags that cannot take effect are refused. The server answers, so a run
-// that ignored the flag would succeed – and a negative interval used to crash.
-func TestIneffectiveFlagsRejected(t *testing.T) {
+// Flags that cannot take effect, or values out of range, are refused. The
+// server answers, so a run that let the flag through would succeed – and a
+// negative interval used to crash.
+func TestFlagsRejected(t *testing.T) {
 	addr, _ := startServer(t)
 
 	for _, args := range [][]string{
@@ -286,6 +287,9 @@ func TestIneffectiveFlagsRejected(t *testing.T) {
 		{"--timeout", "-1s"},
 		{"--samples", "3"}, // only with --interval
 		{"--on-change"},    // only with --interval
+		{"--unit", "256"},  // would wrap to 0, the broadcast address
+		{"--word-order", "middle"},
+		{"--byte-order", "middle"},
 	} {
 		if _, code := exec(t, append([]string{addr, "42082", "uint16"}, args...)...); code == 0 {
 			t.Errorf("%v: expected a non-zero exit code", args)
@@ -324,6 +328,50 @@ func TestJSONNonFiniteFloat(t *testing.T) {
 {"address":42014,"raw":["0x3F80","0x0000"],"value":1}`
 	if got := strings.TrimSpace(out); got != want {
 		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// A string is one value over all its registers: read in full it is decoded,
+// and if any register is missing it fails as a whole rather than showing the
+// text with the missing part silently dropped.
+func TestString(t *testing.T) {
+	addr, h := startServer(t)
+	h.set(42296, 0x4543) // "EC"
+	h.set(42297, 0x4F46) // "OF"
+
+	out, code := exec(t, addr, "42296", "string", "--count", "2")
+	if code != 0 || !strings.HasSuffix(strings.TrimSpace(out), "ECOF") {
+		t.Fatalf("exit code %d, want the text ECOF:\n%s", code, out)
+	}
+
+	// 42300 and 42301 do not exist.
+	out, code = exec(t, addr, "42296", "string", "--count", "6")
+	if code == 0 || !strings.Contains(out, "illegal data address") || strings.Contains(out, "ECOF") {
+		t.Fatalf("exit code %d, want an error and no text:\n%s", code, out)
+	}
+}
+
+func TestFormatValue(t *testing.T) {
+	for _, tc := range []struct {
+		v        any
+		dec, hex string
+	}{
+		{uint16(100), "100", "0x0064"},
+		{int16(-5), "-5", "0xFFFB"},
+		{uint32(65536), "65536", "0x00010000"},
+		{int32(-5), "-5", "0xFFFFFFFB"},
+		// Floats and text stay as they are with --out hex.
+		{float32(1.5), "1.5", "1.5"},
+		{float64(0.1), "0.1", "0.1"},
+		{"ECOF", "ECOF", "ECOF"},
+		{nil, "", ""},
+	} {
+		if got := formatValue(tc.v, false); got != tc.dec {
+			t.Errorf("%#v dec: got %q, want %q", tc.v, got, tc.dec)
+		}
+		if got := formatValue(tc.v, true); got != tc.hex {
+			t.Errorf("%#v hex: got %q, want %q", tc.v, got, tc.hex)
+		}
 	}
 }
 
